@@ -1,0 +1,7 @@
+@FoodWebApp.Backend_HostAddress = http://localhost:5202
+
+POST {{FoodWebApp.Backend_HostAddress}}/login
+Accept: text/json;
+Content-Type: application/json;
+
+< FoodWebApp.Backend.TestData.json
