@@ -1,10 +1,4 @@
-﻿using System;
-using System.Text;
-using Isopoh.Cryptography.Argon2;
-using SurrealDb.Net.Models;
-using static System.Guid;
-
-namespace FoodWebApp.Backend.Entities;
+﻿namespace FoodWebApp.Backend.Entities;
 
 public class UserEntity : Record
 {
@@ -12,12 +6,18 @@ public class UserEntity : Record
     public string Password { get; set; } = string.Empty;
     public string Salt { get; set; } = string.Empty;
 
+    public List<string> Permissions { get; set; } = [];
+
     public string? ReferralCode { get; set; }
+
+    public bool Banned { get; set; } = false;
 
     public static UserEntity Create(string username, string password, string? referralcode)
     {
         var (hashedPassword, salt) = HashPassword(password);
-        return new UserEntity { Username= username, Password = hashedPassword, Salt = salt, ReferralCode = referralcode};
+        return new UserEntity { Username= username, Password = hashedPassword, Salt = salt, ReferralCode = referralcode, Permissions =
+            ["user"]
+        };
     }
     
     public bool VerifyPassword(string salt, string password, string hashedPassword)

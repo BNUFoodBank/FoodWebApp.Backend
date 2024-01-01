@@ -1,8 +1,5 @@
-using System.Security.Cryptography;
 using FoodWebApp.Backend.Endpoints;
-using FoodWebApp.Backend.Util;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
-using Microsoft.IdentityModel.Tokens;
 
 var builder = WebApplication.CreateSlimBuilder(args);
 

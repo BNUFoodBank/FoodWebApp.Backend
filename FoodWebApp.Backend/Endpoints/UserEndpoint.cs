@@ -1,12 +1,4 @@
-﻿using System.IdentityModel.Tokens.Jwt;
-using System.Net;
-using System.Security.Claims;
-using FoodWebApp.Backend.Entities;
-using FoodWebApp.Backend.Requests;
-using Microsoft.AspNetCore.Authorization;
-using Microsoft.AspNetCore.Mvc;
-using Microsoft.IdentityModel.Tokens;
-using SurrealDb.Net;
+﻿using SurrealDb.Net.Models.Auth;
 
 namespace FoodWebApp.Backend.Endpoints;
 
@@ -17,32 +9,36 @@ public class UserEndpoint : IEndPoint
     
     public UserEndpoint()
     {
-        //_dbClient = new SurrealDbClient("");
-        //_dbClient.SignIn(new RootAuth {Username = "root", Password = "root"});
+        _dbClient = new SurrealDbClient("");
+        _dbClient.SignIn(new RootAuth {Username = "root", Password = "root"});
     }
     
     public HttpResponseMessage Login(UserLoginRequest request)
     {
         _dbClient.Connect().GetAwaiter().GetResult();
         var parameters = new Dictionary<string, object> { { "User", request.Username } };
-        var user = _dbClient.Query("SELECT * FROM type::table(\"Users\") WHERE Username EQUALS $user", parameters).GetAwaiter().GetResult().GetValue<UserEntity>(0);
+        var user = _dbClient.Query("SELECT * FROM type::table(\"Users\") WHERE Username EQUALS $User", parameters).GetAwaiter().GetResult().GetValue<UserEntity>(0);
         
         if (user == null) {
             var responseMessage = new HttpResponseMessage(HttpStatusCode.Conflict);
             responseMessage.Content = new StringContent("Incorrect Username or Password.");
             return responseMessage;
         }
-
+        if (user.Banned)
+        {
+            return new HttpResponseMessage(HttpStatusCode.Conflict);
+        }
+        
         if (!user.VerifyPassword(user.Salt, request.Password, user.Password)) {
             var responseMessage = new HttpResponseMessage(HttpStatusCode.Conflict);
             responseMessage.Content = new StringContent("Incorrect Username or Password.");
             return responseMessage;
         }
 
-        var token = GenerateJWTToken(request.Username, user.Id!.ToString(), TimeSpan.FromDays(30), ["user"]);
+        var rawToken = GenerateJWTToken(request.Username, user.Id!.ToString(), FromDays(30), user.Permissions.ToArray());
         
         var response = new HttpResponseMessage(HttpStatusCode.OK);
-        response.Content = new StringContent(token);
+        response.Content = new StringContent(rawToken);
         return response;
     }
 
@@ -50,7 +46,7 @@ public class UserEndpoint : IEndPoint
     {
         _dbClient.Connect().GetAwaiter().GetResult();
         var parameters = new Dictionary<string, object> { { "User", request.Username } };
-        var userCheck = _dbClient.Query("SELECT * FROM type::table(\"Users\") WHERE Username EQUALS $user", parameters).GetAwaiter().GetResult().GetValue<UserEntity>(0);
+        var userCheck = _dbClient.Query("SELECT * FROM type::table(\"Users\") WHERE Username EQUALS $User", parameters).GetAwaiter().GetResult().GetValue<UserEntity>(0);
         
         if (userCheck != null)
         {
@@ -70,7 +66,7 @@ public class UserEndpoint : IEndPoint
     {
         _dbClient.Connect().GetAwaiter().GetResult();
         var parameters = new Dictionary<string, object> { { "User", request.Username } };
-        var userCheck = _dbClient.Query("SELECT * FROM type::table(\"Users\") WHERE Username EQUALS $user", parameters).GetAwaiter().GetResult().GetValue<UserEntity>(0);
+        var userCheck = _dbClient.Query("SELECT * FROM type::table(\"Users\") WHERE Username EQUALS $User", parameters).GetAwaiter().GetResult().GetValue<UserEntity>(0);
 
         if (userCheck == null)
         {
@@ -124,7 +120,7 @@ public class UserEndpoint : IEndPoint
             issuer: "IDGAF",
             audience: "Who cares?",
             claims: claims,
-            expires: DateTime.Now.Add(expiration),
+            expires: Now.Add(expiration),
             signingCredentials: signingCredentials);
 
         var rawToken = new JwtSecurityTokenHandler().WriteToken(token);

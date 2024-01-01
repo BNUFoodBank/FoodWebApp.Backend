@@ -1,6 +1,4 @@
-﻿using FoodWebApp.Backend.Util;
-
-namespace FoodWebApp.Backend.Endpoints;
+﻿namespace FoodWebApp.Backend.Endpoints;
 
 public abstract class IEndPoint : IComparable<IEndPoint>
 {

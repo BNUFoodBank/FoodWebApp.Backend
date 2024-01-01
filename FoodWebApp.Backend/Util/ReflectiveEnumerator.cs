@@ -1,6 +1,4 @@
-﻿using System.Reflection;
-
-namespace FoodWebApp.Backend.Util;
+﻿namespace FoodWebApp.Backend.Util;
 
 public static class ReflectiveEnumerator
 {
