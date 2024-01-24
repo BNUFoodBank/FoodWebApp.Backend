@@ -12,6 +12,8 @@ public class UserEntity : Record
 
     public bool Banned { get; set; } = false;
 
+    public string Role { get; set; } = "User";
+
     public static UserEntity Create(string username, string password, string? referralcode)
     {
         var (hashedPassword, salt) = HashPassword(password);

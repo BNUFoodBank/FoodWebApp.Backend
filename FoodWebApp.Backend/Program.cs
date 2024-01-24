@@ -1,33 +1,44 @@
 using FoodWebApp.Backend.Endpoints;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 
-var builder = WebApplication.CreateSlimBuilder(args);
+namespace FoodWebApp.Backend;
 
-builder.Services.ConfigureHttpJsonOptions(options =>
+public class Program
 {
-    options.SerializerOptions.TypeInfoResolverChain.Insert(0, AppJsonSerializerContext.Default);
-});
-
-builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme).AddJwtBearer(options =>
-{
-    options.TokenValidationParameters = new TokenValidationParameters
+    public static void Main(string[] args)
     {
-        ValidateIssuer = true,
-        ValidateAudience = true,
-        ValidateLifetime = true,
-        ValidateIssuerSigningKey = true,
-        ValidIssuer = "your_issuer",
-        ValidAudience = "your_audience",
-        IssuerSigningKey = new SymmetricSecurityKey("your_secret_key"u8.ToArray()),
-        ValidAlgorithms = new []{"SHA512"}
-    };
-});
+        var builder = WebApplication.CreateSlimBuilder(args);
 
-var app = builder.Build();
+        Seeding.SeedDatabase();
+        
+        builder.Services.ConfigureHttpJsonOptions(options =>
+        {
+            options.SerializerOptions.TypeInfoResolverChain.Insert(0, AppJsonSerializerContext.Default);
+        });
 
-app.UseAuthentication();
-app.UseAuthorization();
+        builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme).AddJwtBearer(options =>
+        {
+            options.TokenValidationParameters = new TokenValidationParameters
+            {
+                ValidateIssuer = true,
+                ValidateAudience = true,
+                ValidateLifetime = true,
+                ValidateIssuerSigningKey = true,
+                ValidIssuer = "your_issuer",
+                ValidAudience = "your_audience",
+                IssuerSigningKey = new SymmetricSecurityKey("your_secret_key"u8.ToArray()),
+                ValidAlgorithms = new []{"SHA512"}
+            };
+        });
 
-IEndPoint.AddAllEndpoints(app);
+        builder.Services.AddAuthorization();
 
-app.Run();
+        var app = builder.Build();
+
+        app.UseAuthentication();
+        app.UseAuthorization();
+
+        IEndPoint.AddAllEndpoints(app);
+        app.Run();
+    }
+}

@@ -1,4 +1,6 @@
-﻿namespace FoodWebApp.Backend.Entities;
+﻿using FoodWebApp.Backend.Public;
+
+namespace FoodWebApp.Backend.Entities;
 
 public class FoodBankEntity : Record
 {
@@ -7,7 +9,8 @@ public class FoodBankEntity : Record
     public string Address { get; set; }
     
     // Storage / Request Data
-    public Dictionary<string, int> Items { get; set; }
+    public List<string> DietaryRestriction { get; set; } = new();
+    public Dictionary<string, int> Items { get; set; } = new();
     public Dictionary<string, int> RequestedItems { get; set; }
     
     public Dictionary<string, List<string>> UserRequests { get; set; }
@@ -46,4 +49,14 @@ public class FoodBankEntity : Record
 
         return rep;
     }
+    
+    
+    // Convert FoodBank to Public
+    public PublicFoodBank GetPublicFoodBank()
+    {
+        var pfb = new PublicFoodBank(Name, Address, DietaryRestriction, Items);
+        return pfb;
+    }
+
+    
 }

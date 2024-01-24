@@ -20,11 +20,12 @@ public abstract class IEndPoint : IComparable<IEndPoint>
         foreach (var endPoint in endPoints)
         {
             endPoint.AddEndpoints(app);
+            Console.WriteLine("Added: " + endPoint.GetType().Name);
         }
     }
 
     public int CompareTo(IEndPoint? other)
     {
-        throw new NotImplementedException();
+        return 0;
     }
 }

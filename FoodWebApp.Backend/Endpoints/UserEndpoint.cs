@@ -9,7 +9,7 @@ public class UserEndpoint : IEndPoint
     
     public UserEndpoint()
     {
-        _dbClient = new SurrealDbClient("");
+        _dbClient = new SurrealDbClient("ws://127.0.0.1:4505");
         _dbClient.SignIn(new RootAuth {Username = "root", Password = "root"});
     }
     
@@ -26,7 +26,9 @@ public class UserEndpoint : IEndPoint
         }
         if (user.Banned)
         {
-            return new HttpResponseMessage(HttpStatusCode.Conflict);
+            var responseMessage = new HttpResponseMessage(HttpStatusCode.Conflict);
+            responseMessage.Content = new StringContent("Incorrect Username or Password.");
+            return responseMessage;
         }
         
         if (!user.VerifyPassword(user.Salt, request.Password, user.Password)) {
@@ -38,7 +40,7 @@ public class UserEndpoint : IEndPoint
         var rawToken = GenerateJWTToken(request.Username, user.Id!.ToString(), FromDays(30), user.Permissions.ToArray());
         
         var response = new HttpResponseMessage(HttpStatusCode.OK);
-        response.Content = new StringContent(rawToken);
+        response.Content = new StringContent(rawToken+"#"+ user.Role);
         return response;
     }
 
@@ -62,7 +64,7 @@ public class UserEndpoint : IEndPoint
         return response;
     }
     
-    public HttpResponseMessage Delete([FromHeader]ClaimsPrincipal userClaims, [FromBody]UserDeletionRequest request)
+    public HttpResponseMessage Delete([FromHeader]string userClaims, [FromBody]UserDeletionRequest request)
     {
         _dbClient.Connect().GetAwaiter().GetResult();
         var parameters = new Dictionary<string, object> { { "User", request.Username } };

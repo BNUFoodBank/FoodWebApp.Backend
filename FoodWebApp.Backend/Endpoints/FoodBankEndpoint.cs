@@ -1,4 +1,6 @@
-﻿namespace FoodWebApp.Backend.Endpoints;
+﻿using SurrealDb.Net.Models.Auth;
+
+namespace FoodWebApp.Backend.Endpoints;
 
 public class FoodBankEndpoint : IEndPoint
 {
@@ -6,16 +8,12 @@ public class FoodBankEndpoint : IEndPoint
 
     public FoodBankEndpoint()
     {
-        _dbClient = new SurrealDbClient("");
+        _dbClient = new SurrealDbClient("ws://127.0.0.1:4505");
+        _dbClient.SignIn(new RootAuth() {Password = "root", Username = "root"});
     }
 
-    public HttpResponseMessage CreateFoodBank([FromHeader]ClaimsPrincipal claims,FoodBankCreationRequest request)
+    public HttpResponseMessage CreateFoodBank([FromHeader]string claims,FoodBankCreationRequest request)
     {
-        if (!claims.HasClaim("role", "admin") && !claims.HasClaim("role", "manager"))
-        {
-            return new HttpResponseMessage(HttpStatusCode.Forbidden);
-        }
-        
         
         _dbClient.Connect().GetAwaiter().GetResult();
         var parameters = new Dictionary<string, object> { { "Name", request.Name }, { "Address", request.Address } };
@@ -28,19 +26,15 @@ public class FoodBankEndpoint : IEndPoint
 
         _ = check;
 
-       var fb = FoodBankEntity.Create(request.Name, request.Address, claims.Identity!.Name!);
+       var fb = FoodBankEntity.Create(request.Name, request.Address, request.Name);
 
        _dbClient.Create("FoodBank", fb).GetAwaiter().GetResult();
 
         return new HttpResponseMessage(HttpStatusCode.Created);
     }
 
-    public HttpResponseMessage AddItems([FromHeader] ClaimsPrincipal claims, FoodBankUpdateItemsRequest request)
+    public HttpResponseMessage AddItems([FromHeader]string claims, FoodBankUpdateItemsRequest request)
     {
-        if (!claims.HasClaim("role", "admin") && !claims.HasClaim("role", "manager"))
-        {
-            return new HttpResponseMessage(HttpStatusCode.Forbidden);
-        }
 
         var parameters = new Dictionary<string, object> {{"Name", request.FoodBankName}};
         var check = _dbClient.Query("SELECT * FROM type::table(\"FoodBank\") WHERE Name EQUALS $Name", parameters).GetAwaiter().GetResult();
@@ -62,12 +56,8 @@ public class FoodBankEndpoint : IEndPoint
         return new HttpResponseMessage(HttpStatusCode.Accepted);
     }
 
-    public HttpResponseMessage RemoveItems([FromHeader] ClaimsPrincipal claims, FoodBankUpdateItemsRequest request)
+    public HttpResponseMessage RemoveItems([FromHeader] string claims, FoodBankUpdateItemsRequest request)
     {
-        if (!claims.HasClaim("role", "admin") && !claims.HasClaim("role", "manager"))
-        {
-            return new HttpResponseMessage(HttpStatusCode.Forbidden);
-        }
 
         var parameters = new Dictionary<string, object> {{"Name", request.FoodBankName}};
         var check = _dbClient.Query("SELECT * FROM type::table(\"FoodBank\") WHERE Name EQUALS $Name", parameters).GetAwaiter().GetResult();
@@ -109,7 +99,7 @@ public class FoodBankEndpoint : IEndPoint
         return check.IsEmpty ? new HttpResponseMessage(HttpStatusCode.NotFound) : check.GetValue<FoodBankEntity>(0)!.GetPage();
     }
 
-    public HttpResponseMessage UpdatePage([FromHeader] ClaimsPrincipal claims,FoodBankPageUpdateRequest request)
+    public HttpResponseMessage UpdatePage([FromHeader] string claims,FoodBankPageUpdateRequest request)
     {
         var parameters = new Dictionary<string, object> {{"Name", request.Name}};
         var check = _dbClient.Query("SELECT * FROM type::table(\"FoodBank\") WHERE Name EQUALS $Name", parameters).GetAwaiter().GetResult();
@@ -119,12 +109,6 @@ public class FoodBankEndpoint : IEndPoint
         }
 
         var fb = check.GetValue<FoodBankEntity>(0)!;
-
-
-        if (claims.Identity!.Name != fb.Manager && !claims.HasClaim("role", "admin"))
-        {
-            return new HttpResponseMessage(HttpStatusCode.Unauthorized);
-        }
 
         if (!request.Description.IsNullOrEmpty())
         {
@@ -144,6 +128,19 @@ public class FoodBankEndpoint : IEndPoint
         _ = _dbClient.Upsert(fb).GetAwaiter().GetResult();
 
         return new HttpResponseMessage(HttpStatusCode.Accepted);
+    }
+
+    public HttpResponseMessage FilterBanks(Dictionary<string, string> filter)
+    {
+        _dbClient.Connect().GetAwaiter().GetResult();
+
+        var foodbanks = _dbClient.Select<FoodBankEntity>("FoodBank").GetAwaiter().GetResult();
+
+        var filteredList = Filtering.FilterList(foodbanks.ToList(), filter);
+
+        var message = new HttpResponseMessage(HttpStatusCode.Found);
+        message.Content = new StringContent(filteredList.ToString() ?? string.Empty);
+        return message;
     }
     
     protected override void AddEndpoints(WebApplication app)
