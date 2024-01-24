@@ -1,4 +1,5 @@
-﻿using SurrealDb.Net.Models.Auth;
+﻿using FoodWebApp.Backend.Public;
+using SurrealDb.Net.Models.Auth;
 
 namespace FoodWebApp.Backend.Endpoints;
 
@@ -12,7 +13,18 @@ public class FoodBankEndpoint : IEndPoint
         _dbClient.SignIn(new RootAuth() {Password = "root", Username = "root"});
     }
 
-    public HttpResponseMessage CreateFoodBank([FromHeader]string claims,FoodBankCreationRequest request)
+    public List<PublicFoodBank> GetFoodBanks()
+    {
+        var list = new List<PublicFoodBank>();
+        list.Add(new PublicFoodBank("Test1","address2", new List<string>(){"halal", "vegan"}, new Dictionary<string, int>()));
+        list.Add(new PublicFoodBank("Test2","address2", new List<string>(){"halal", "vegan"}, new Dictionary<string, int>()));
+        list.Add(new PublicFoodBank("Test3","address2", new List<string>(){"halal", "vegan"}, new Dictionary<string, int>()));
+        list.Add(new PublicFoodBank("Test4","address2", new List<string>(){"halal", "vegan"}, new Dictionary<string, int>()));
+
+        return list;
+    }
+
+    public bool CreateFoodBank([FromHeader]string claims,FoodBankCreationRequest request)
     {
         
         _dbClient.Connect().GetAwaiter().GetResult();
@@ -21,7 +33,7 @@ public class FoodBankEndpoint : IEndPoint
 
         if (!check.IsEmpty)
         {
-            return new HttpResponseMessage(HttpStatusCode.Conflict);
+            return false;
         }
 
         _ = check;
@@ -30,10 +42,10 @@ public class FoodBankEndpoint : IEndPoint
 
        _dbClient.Create("FoodBank", fb).GetAwaiter().GetResult();
 
-        return new HttpResponseMessage(HttpStatusCode.Created);
+       return true;
     }
 
-    public HttpResponseMessage AddItems([FromHeader]string claims, FoodBankUpdateItemsRequest request)
+    public bool AddItems([FromHeader]string claims, FoodBankUpdateItemsRequest request)
     {
 
         var parameters = new Dictionary<string, object> {{"Name", request.FoodBankName}};
@@ -41,7 +53,7 @@ public class FoodBankEndpoint : IEndPoint
 
         if (!check.IsEmpty)
         {
-            return new HttpResponseMessage(HttpStatusCode.NotFound);
+            return false;
         }
 
         var fb = check.GetValue<FoodBankEntity>(0)!;
@@ -53,10 +65,10 @@ public class FoodBankEndpoint : IEndPoint
 
         _dbClient.Upsert(fb).GetAwaiter().GetResult();
 
-        return new HttpResponseMessage(HttpStatusCode.Accepted);
+        return true;
     }
 
-    public HttpResponseMessage RemoveItems([FromHeader] string claims, FoodBankUpdateItemsRequest request)
+    public bool RemoveItems([FromHeader] string claims, FoodBankUpdateItemsRequest request)
     {
 
         var parameters = new Dictionary<string, object> {{"Name", request.FoodBankName}};
@@ -64,7 +76,7 @@ public class FoodBankEndpoint : IEndPoint
 
         if (!check.IsEmpty)
         {
-            return new HttpResponseMessage(HttpStatusCode.NotFound);
+            return false;
         }
 
         var fb = check.GetValue<FoodBankEntity>(0)!;
@@ -87,25 +99,25 @@ public class FoodBankEndpoint : IEndPoint
 
         _dbClient.Upsert(fb).GetAwaiter().GetResult();
 
-        return new HttpResponseMessage(HttpStatusCode.Accepted);
+        return true;
     }
 
 
-    public HttpResponseMessage GetPage(string name)
+    public string GetPage(string name)
     {
         var parameters = new Dictionary<string, object> {{"Name", name}};
         var check = _dbClient.Query("SELECT * FROM type::table(\"FoodBank\") WHERE Name EQUALS $Name", parameters).GetAwaiter().GetResult();
 
-        return check.IsEmpty ? new HttpResponseMessage(HttpStatusCode.NotFound) : check.GetValue<FoodBankEntity>(0)!.GetPage();
+        return check.GetValue<FoodBankEntity>(0)!.GetPage();
     }
 
-    public HttpResponseMessage UpdatePage([FromHeader] string claims,FoodBankPageUpdateRequest request)
+    public bool UpdatePage([FromHeader] string claims,FoodBankPageUpdateRequest request)
     {
         var parameters = new Dictionary<string, object> {{"Name", request.Name}};
         var check = _dbClient.Query("SELECT * FROM type::table(\"FoodBank\") WHERE Name EQUALS $Name", parameters).GetAwaiter().GetResult();
         if (check.IsEmpty)
         {
-            return new HttpResponseMessage(HttpStatusCode.NotFound);
+            return false;
         }
 
         var fb = check.GetValue<FoodBankEntity>(0)!;
@@ -127,20 +139,18 @@ public class FoodBankEndpoint : IEndPoint
 
         _ = _dbClient.Upsert(fb).GetAwaiter().GetResult();
 
-        return new HttpResponseMessage(HttpStatusCode.Accepted);
+        return false;
     }
 
-    public HttpResponseMessage FilterBanks(Dictionary<string, string> filter)
+    public List<PublicFoodBank> FilterBanks(Dictionary<string, string> filter)
     {
         _dbClient.Connect().GetAwaiter().GetResult();
 
         var foodbanks = _dbClient.Select<FoodBankEntity>("FoodBank").GetAwaiter().GetResult();
 
         var filteredList = Filtering.FilterList(foodbanks.ToList(), filter);
-
-        var message = new HttpResponseMessage(HttpStatusCode.Found);
-        message.Content = new StringContent(filteredList.ToString() ?? string.Empty);
-        return message;
+        
+        return filteredList;
     }
     
     protected override void AddEndpoints(WebApplication app)

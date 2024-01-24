@@ -38,16 +38,9 @@ public class FoodBankEntity : Record
         };
 
 
-    public HttpResponseMessage GetPage()
+    public string GetPage()
     {
-        var rep = new HttpResponseMessage(HttpStatusCode.OK);
-
-        var msg = $"Title:{Title}$32Description:{Description}$32Instructions:{Instructions}";
-
-        rep.Content = new StringContent(msg);
-
-
-        return rep;
+        return $"Title:{Title}$32Description:{Description}$32Instructions:{Instructions}";
     }
     
     

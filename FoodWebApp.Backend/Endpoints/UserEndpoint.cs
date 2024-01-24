@@ -13,38 +13,30 @@ public class UserEndpoint : IEndPoint
         _dbClient.SignIn(new RootAuth {Username = "root", Password = "root"});
     }
     
-    public HttpResponseMessage Login(UserLoginRequest request)
+    public string Login(UserLoginRequest request)
     {
         _dbClient.Connect().GetAwaiter().GetResult();
         var parameters = new Dictionary<string, object> { { "User", request.Username } };
         var user = _dbClient.Query("SELECT * FROM type::table(\"Users\") WHERE Username EQUALS $User", parameters).GetAwaiter().GetResult().GetValue<UserEntity>(0);
         
         if (user == null) {
-            var responseMessage = new HttpResponseMessage(HttpStatusCode.Conflict);
-            responseMessage.Content = new StringContent("Incorrect Username or Password.");
-            return responseMessage;
+            return "Incorrect Username or Password.";
         }
         if (user.Banned)
         {
-            var responseMessage = new HttpResponseMessage(HttpStatusCode.Conflict);
-            responseMessage.Content = new StringContent("Incorrect Username or Password.");
-            return responseMessage;
+            return "Incorrect Username or Password.";
         }
         
         if (!user.VerifyPassword(user.Salt, request.Password, user.Password)) {
-            var responseMessage = new HttpResponseMessage(HttpStatusCode.Conflict);
-            responseMessage.Content = new StringContent("Incorrect Username or Password.");
-            return responseMessage;
+            return "Incorrect Username or Password.";
         }
 
         var rawToken = GenerateJWTToken(request.Username, user.Id!.ToString(), FromDays(30), user.Permissions.ToArray());
-        
-        var response = new HttpResponseMessage(HttpStatusCode.OK);
-        response.Content = new StringContent(rawToken+"#"+ user.Role);
-        return response;
+
+        return rawToken+"#"+ user.Role;
     }
 
-    public HttpResponseMessage Register(UserRegisterRequest request)
+    public bool Register(UserRegisterRequest request)
     {
         _dbClient.Connect().GetAwaiter().GetResult();
         var parameters = new Dictionary<string, object> { { "User", request.Username } };
@@ -52,19 +44,16 @@ public class UserEndpoint : IEndPoint
         
         if (userCheck != null)
         {
-            var responseMessage = new HttpResponseMessage(HttpStatusCode.Conflict);
-            responseMessage.Content = new StringContent("User Already Exists");
-            return responseMessage;
+            return false;
         }
 
         var user = UserEntity.Create(request.Username, request.Password, request.ReferralCode);
         _dbClient.Create("Users", user).GetAwaiter().GetResult();
-        var response = new HttpResponseMessage(HttpStatusCode.Created);
-        response.Content = new StringContent("User Registered Successfully");
-        return response;
+ 
+        return true;
     }
     
-    public HttpResponseMessage Delete([FromHeader]string userClaims, [FromBody]UserDeletionRequest request)
+    public bool Delete([FromHeader]string userClaims, [FromBody]UserDeletionRequest request)
     {
         _dbClient.Connect().GetAwaiter().GetResult();
         var parameters = new Dictionary<string, object> { { "User", request.Username } };
@@ -72,23 +61,18 @@ public class UserEndpoint : IEndPoint
 
         if (userCheck == null)
         {
-            var responseMessage = new HttpResponseMessage(HttpStatusCode.NotFound);
-            responseMessage.Content = new StringContent("User Not Found");
-            return responseMessage;
+            return false;
         }
         
         var passwordVerified = userCheck.VerifyPassword(userCheck.Salt, request.Password, userCheck.Password);
         
         if (!passwordVerified) {
-            var responseMessage = new HttpResponseMessage(HttpStatusCode.Unauthorized);
-            responseMessage.Content = new StringContent("Invalid Password");
-            return responseMessage;
+            return false;
         }
         
         _dbClient.Delete("Users", userCheck.Id!.ToString()).GetAwaiter().GetResult();
-        var response = new HttpResponseMessage(HttpStatusCode.OK);
-        response.Content = new StringContent("User Deleted Successfully");
-        return response;
+
+        return true;
     }
 
     protected override void AddEndpoints(WebApplication app)
