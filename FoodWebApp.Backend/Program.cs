@@ -5,7 +5,7 @@ namespace FoodWebApp.Backend;
 
 public class Program
 {
-    public static void Main(string[] args)
+    public static async Task<int> Main(string[] args)
     {
         var builder = WebApplication.CreateSlimBuilder(args);
         
@@ -13,6 +13,8 @@ public class Program
         {
             options.SerializerOptions.TypeInfoResolverChain.Insert(0, AppJsonSerializerContext.Default);
         });
+
+        await Seeding.SeedDatabase();
 
         builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme).AddJwtBearer(options =>
         {
@@ -37,6 +39,8 @@ public class Program
         app.UseAuthorization();
 
         IEndPoint.AddAllEndpoints(app);
-        app.Run();
+        await app.RunAsync();
+
+        return 0;
     }
 }

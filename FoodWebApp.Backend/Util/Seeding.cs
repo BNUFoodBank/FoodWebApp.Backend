@@ -4,18 +4,19 @@ namespace FoodWebApp.Backend.Util;
 
 public class Seeding
 {
-    public static bool SeedDatabase()
+    public static async Task<bool> SeedDatabase()
     {
-        var db = new SurrealDbClient("127.0.0.1");
-        db.SignIn(new RootAuth() {Password = "root", Username = "root"});
+        var db = new SurrealDbClient("ws://127.0.0.1:8000/rpc");
+        await db.SignIn(new RootAuth() {Password = "root", Username = "root"});
+        await db.Use("test", "test");
         
-        db.Delete("FoodBank").GetAwaiter().GetResult();
+        await db.Delete("FoodBanks");
 
         var http = new HttpClient(new HttpClientHandler());
 
-        var responseMessage = http.GetAsync(@"https://www.givefood.org.uk/api/2/foodbanks/").GetAwaiter().GetResult();
+        var responseMessage = await http.GetAsync(@"https://www.givefood.org.uk/api/2/foodbanks/");
 
-        var banks = responseMessage.Content.ReadFromJsonAsync<List<GiveFoodBank>>().GetAwaiter().GetResult();
+        var banks = await responseMessage.Content.ReadFromJsonAsync<List<GiveFoodBank>>();
 
         if (banks == null)
         {
@@ -26,6 +27,7 @@ public class Seeding
                  {
                      Name = giveFoodBank.name,
                      Address = giveFoodBank.address,
+                     LatLng = giveFoodBank.lat_lng,
                      Description = string.Empty,
                      DietaryRestriction = new List<string>(),
                      Instructions = string.Empty,
@@ -33,9 +35,10 @@ public class Seeding
                      Manager = giveFoodBank.email,
                      RequestedItems = new Dictionary<string, int>(),
                      UserRequests = new Dictionary<string, List<string>>(),
+                     ShoppingList = giveFoodBank.urls.shopping_list.ToString()
                  }))
         {
-            db.Create(bank);
+            await db.Create("FoodBanks", bank);
         }
 
         return true;
