@@ -8,8 +8,6 @@ public class Program
     public static void Main(string[] args)
     {
         var builder = WebApplication.CreateSlimBuilder(args);
-
-        Seeding.SeedDatabase();
         
         builder.Services.ConfigureHttpJsonOptions(options =>
         {
@@ -26,8 +24,8 @@ public class Program
                 ValidateIssuerSigningKey = true,
                 ValidIssuer = "your_issuer",
                 ValidAudience = "your_audience",
-                IssuerSigningKey = new SymmetricSecurityKey("your_secret_key"u8.ToArray()),
-                ValidAlgorithms = new []{"SHA512"}
+                IssuerSigningKey = new SymmetricSecurityKey("your_secret_key_is_very_safe_this_was_so_much_fun_to_write_please_keep_this_going_I_should_have_just_auto_generated_this_key_cos_its_now_very_Long"u8.ToArray()),
+                ValidAlgorithms = new []{"HmacSha512"}
             };
         });
 

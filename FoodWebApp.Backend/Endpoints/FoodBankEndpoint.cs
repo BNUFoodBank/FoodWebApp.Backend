@@ -9,7 +9,7 @@ public class FoodBankEndpoint : IEndPoint
 
     public FoodBankEndpoint()
     {
-        _dbClient = new SurrealDbClient("ws://127.0.0.1:4505");
+        _dbClient = new SurrealDbClient("ws://127.0.0.1:8000");
         _dbClient.SignIn(new RootAuth() {Password = "root", Username = "root"});
     }
 
@@ -27,7 +27,6 @@ public class FoodBankEndpoint : IEndPoint
     public bool CreateFoodBank([FromHeader]string claims,FoodBankCreationRequest request)
     {
         
-        _dbClient.Connect().GetAwaiter().GetResult();
         var parameters = new Dictionary<string, object> { { "Name", request.Name }, { "Address", request.Address } };
         var check = _dbClient.Query("SELECT * FROM type::table(\"FoodBank\") WHERE Name EQUALS $Name OR Address EQUALS $Address", parameters).GetAwaiter().GetResult();
 
@@ -144,7 +143,6 @@ public class FoodBankEndpoint : IEndPoint
 
     public List<PublicFoodBank> FilterBanks(Dictionary<string, string> filter)
     {
-        _dbClient.Connect().GetAwaiter().GetResult();
 
         var foodbanks = _dbClient.Select<FoodBankEntity>("FoodBank").GetAwaiter().GetResult();
 
@@ -160,5 +158,6 @@ public class FoodBankEndpoint : IEndPoint
         app.MapPost("/foodbank/items/remove", RemoveItems).RequireAuthorization();
         app.MapPost("/foodbank/page", UpdatePage).RequireAuthorization();
         app.MapGet("/foodbank/page", GetPage).AllowAnonymous();
+        app.MapPost("/foodbank/filter", FilterBanks).AllowAnonymous();
     }
 }

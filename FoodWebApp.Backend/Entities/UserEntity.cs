@@ -25,7 +25,7 @@ public class UserEntity : Record
     public bool VerifyPassword(string salt, string password, string hashedPassword)
     {
         var passwordBytes = Encoding.UTF8.GetBytes(password);
-        var hashedPasswordBytes = Convert.FromBase64String(hashedPassword);
+        Console.WriteLine(Convert.FromBase64String(salt));
         var config = new Argon2Config
         {
             Type = Argon2Type.DataIndependentAddressing,
@@ -34,19 +34,23 @@ public class UserEntity : Record
             MemoryCost = 65536,
             Lanes = 2,
             Password = passwordBytes,
-            Salt = Encoding.UTF8.GetBytes(salt),
+            Salt = Convert.FromBase64String(salt),
             HashLength = 512,
             AssociatedData = "SomeAssociatedData"u8.ToArray()
         };
 
         using var argon2 = new Argon2(config);
-        return argon2.Hash().Buffer == hashedPasswordBytes;
+        var argon = argon2.Hash().Buffer;
+        Console.WriteLine(Convert.ToBase64String(argon));
+        Console.WriteLine(hashedPassword);
+        return Convert.ToBase64String(argon) == hashedPassword;
     }
     
     private static Tuple<string, string> HashPassword(string password)
     {
         var passwordBytes = Encoding.UTF8.GetBytes(password);
         var salt = GenerateSalt();
+        Console.WriteLine(salt);
         var config = new Argon2Config
         {
             Type = Argon2Type.DataIndependentAddressing,
@@ -62,7 +66,8 @@ public class UserEntity : Record
 
         using var argon2 = new Argon2(config);
         var hashResult = argon2.Hash();
-        return Tuple.Create(Convert.ToBase64String(hashResult.Buffer), salt.ToString())!;
+        Console.WriteLine();
+        return Tuple.Create(Convert.ToBase64String(hashResult.Buffer), Convert.ToBase64String(salt))!;
     }
 
     private static byte[] GenerateSalt()

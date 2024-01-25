@@ -1,33 +1,47 @@
-﻿using SurrealDb.Net.Models.Auth;
+﻿using System.Text.Json;
+using SurrealDb.Net.Models.Auth;
 
 namespace FoodWebApp.Backend.Endpoints;
 
+
 public class UserEndpoint : IEndPoint
 {
-
-    private SurrealDbClient _dbClient;
     
     public UserEndpoint()
     {
-        _dbClient = new SurrealDbClient("ws://127.0.0.1:4505");
-        _dbClient.SignIn(new RootAuth {Username = "root", Password = "root"});
+       
     }
     
-    public string Login(UserLoginRequest request)
+    static string ToJsonString(object? o)
     {
-        _dbClient.Connect().GetAwaiter().GetResult();
-        var parameters = new Dictionary<string, object> { { "User", request.Username } };
-        var user = _dbClient.Query("SELECT * FROM type::table(\"Users\") WHERE Username EQUALS $User", parameters).GetAwaiter().GetResult().GetValue<UserEntity>(0);
+        return JsonSerializer.Serialize(o, new JsonSerializerOptions { WriteIndented = true, });
+    }
+    
+    public async Task<string> Login(UserLoginRequest request)
+    {
+        var  dbClient = new SurrealDbClient("ws://127.0.0.1:8000/rpc");
+        await dbClient.SignIn(new RootAuth {Username = "root", Password = "root"});
+        await dbClient.Use("test", "test");
+        var userCheck = await dbClient.Select<UserEntity>("Users");
         
-        if (user == null) {
+        Console.WriteLine(ToJsonString(request));
+
+        var userEntities = userCheck.ToList();
+        Console.WriteLine(request.Username);
+        if (userEntities.Count(x => x.Username == request.Username) == 0)
+        {
+            Console.WriteLine("HIT");
             return "Incorrect Username or Password.";
         }
+
+        var user = userEntities.First(x => x.Username == request.Username);
         if (user.Banned)
         {
             return "Incorrect Username or Password.";
         }
         
         if (!user.VerifyPassword(user.Salt, request.Password, user.Password)) {
+            Console.WriteLine("YAP");
             return "Incorrect Username or Password.";
         }
 
@@ -36,28 +50,35 @@ public class UserEndpoint : IEndPoint
         return rawToken+"#"+ user.Role;
     }
 
-    public bool Register(UserRegisterRequest request)
+    public async Task<string> Register(UserRegisterRequest request)
     {
-        _dbClient.Connect().GetAwaiter().GetResult();
+        var  dbClient = new SurrealDbClient("ws://127.0.0.1:8000/rpc");
+        await dbClient.SignIn(new RootAuth {Username = "root", Password = "root"});
+        await dbClient.Use("test", "test");
+
         var parameters = new Dictionary<string, object> { { "User", request.Username } };
-        var userCheck = _dbClient.Query("SELECT * FROM type::table(\"Users\") WHERE Username EQUALS $User", parameters).GetAwaiter().GetResult().GetValue<UserEntity>(0);
+        var userCheck = await dbClient.Select<UserEntity>("Users");
         
-        if (userCheck != null)
+        Console.WriteLine(ToJsonString(userCheck));
+        
+        if (userCheck.Count(x => x.Username == request.Username) == 1)
         {
-            return false;
+            Console.WriteLine("HIT");
+            return "Failed To Register";
         }
 
         var user = UserEntity.Create(request.Username, request.Password, request.ReferralCode);
-        _dbClient.Create("Users", user).GetAwaiter().GetResult();
- 
-        return true;
+        await dbClient.Create("Users", user);
+        return "Successfully Registered";
     }
     
     public bool Delete([FromHeader]string userClaims, [FromBody]UserDeletionRequest request)
     {
-        _dbClient.Connect().GetAwaiter().GetResult();
+        var  _dbClient = new SurrealDbClient("ws://127.0.0.1:8000");
+        _dbClient.SignIn(new RootAuth {Username = "root", Password = "root"});
+        _dbClient.Use("test", "test");
         var parameters = new Dictionary<string, object> { { "User", request.Username } };
-        var userCheck = _dbClient.Query("SELECT * FROM type::table(\"Users\") WHERE Username EQUALS $User", parameters).GetAwaiter().GetResult().GetValue<UserEntity>(0);
+        var userCheck = _dbClient.Query("SELECT * FROM type::table(\"Users\") WHERE Username = $User", parameters).GetAwaiter().GetResult().GetValue<UserEntity>(0);
 
         if (userCheck == null)
         {
@@ -85,12 +106,12 @@ public class UserEndpoint : IEndPoint
     static string GenerateJWTToken(string username, string userId, TimeSpan expiration, string[] permissions)
     {
         
-        var symmetricKey = new SymmetricSecurityKey("your_secret_key"u8.ToArray());
-        
+        var symmetricKey = new SymmetricSecurityKey("your_secret_key_is_very_safe_this_was_so_much_fun_to_write_please_keep_this_going_I_should_have_just_auto_generated_this_key_cos_its_now_very_Long"u8.ToArray());
+
         var signingCredentials = new SigningCredentials(
             symmetricKey,
 
-            SecurityAlgorithms.Sha512);
+            SecurityAlgorithms.HmacSha512);
 
         var claims = new List<Claim>()
         {
