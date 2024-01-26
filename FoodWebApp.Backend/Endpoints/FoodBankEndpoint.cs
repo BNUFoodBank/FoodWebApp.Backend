@@ -13,7 +13,6 @@ public class FoodBankEndpoint : IEndPoint
 
     public async  Task<List<PublicFoodBank>> GetFoodBanks()
     {
-        Console.WriteLine("TEST");
         var  dbClient = new SurrealDbClient("ws://127.0.0.1:8000/rpc");
         await dbClient.SignIn(new RootAuth {Username = "root", Password = "root"});
         await dbClient.Use("test", "test");

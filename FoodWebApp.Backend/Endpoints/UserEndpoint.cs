@@ -23,14 +23,10 @@ public class UserEndpoint : IEndPoint
         await dbClient.SignIn(new RootAuth {Username = "root", Password = "root"});
         await dbClient.Use("test", "test");
         var userCheck = await dbClient.Select<UserEntity>("Users");
-        
-        Console.WriteLine(ToJsonString(request));
 
         var userEntities = userCheck.ToList();
-        Console.WriteLine(request.Username);
         if (userEntities.Count(x => x.Username == request.Username) == 0)
         {
-            Console.WriteLine("HIT");
             return "Incorrect Username or Password.";
         }
 
@@ -41,7 +37,6 @@ public class UserEndpoint : IEndPoint
         }
         
         if (!user.VerifyPassword(user.Salt, request.Password, user.Password)) {
-            Console.WriteLine("YAP");
             return "Incorrect Username or Password.";
         }
 
@@ -59,11 +54,8 @@ public class UserEndpoint : IEndPoint
         var parameters = new Dictionary<string, object> { { "User", request.Username } };
         var userCheck = await dbClient.Select<UserEntity>("Users");
         
-        Console.WriteLine(ToJsonString(userCheck));
-        
         if (userCheck.Count(x => x.Username == request.Username) == 1)
         {
-            Console.WriteLine("HIT");
             return "Failed To Register";
         }
 
