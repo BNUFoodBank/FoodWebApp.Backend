@@ -1,4 +1,5 @@
 ﻿using System.Text.Json;
+using Microsoft.AspNetCore.Authorization;
 using SurrealDb.Net.Models.Auth;
 
 namespace FoodWebApp.Backend.Endpoints;
@@ -87,12 +88,40 @@ public class UserEndpoint : IEndPoint
 
         return true;
     }
+    
+    public async Task<string> UpdatePassword([FromBody] UserPasswordUpdateRequest request)
+    {
+        var  dbClient = new SurrealDbClient("ws://127.0.0.1:8000/rpc");
+        await dbClient.SignIn(new RootAuth {Username = "root", Password = "root"});
+        await dbClient.Use("test", "test");
+
+        var parameters = new Dictionary<string, object> { { "User", request.Username } };
+        var userCheck = await dbClient.Select<UserEntity>("Users");
+        
+        var user = userCheck.First(x => x.Username == request.Username);
+        
+        if (!user.VerifyPassword(user.Salt, request.OldPassword, user.Password))
+        {
+            return "Invalid Password.";
+        }
+
+        var (salt, password)= UserEntity.HashPassword(request.NewPassword);
+
+        user.Salt = salt;
+        user.Password = password;
+
+        await dbClient.Upsert(user);
+        
+        
+        return "Password Update";
+    }
 
     protected override void AddEndpoints(WebApplication app)
     {
         app.MapPost("/user/login", Login);
         app.MapPost("/user/register", Register);
         app.MapPost("/user/delete", Delete).RequireAuthorization();
+        app.MapPost("/user/updatepassword", UpdatePassword);
     }
 
     static string GenerateJWTToken(string username, string userId, TimeSpan expiration, string[] permissions)

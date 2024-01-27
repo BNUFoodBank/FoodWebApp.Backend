@@ -25,7 +25,6 @@ public class UserEntity : Record
     public bool VerifyPassword(string salt, string password, string hashedPassword)
     {
         var passwordBytes = Encoding.UTF8.GetBytes(password);
-        Console.WriteLine(Convert.FromBase64String(salt));
         var config = new Argon2Config
         {
             Type = Argon2Type.DataIndependentAddressing,
@@ -41,16 +40,13 @@ public class UserEntity : Record
 
         using var argon2 = new Argon2(config);
         var argon = argon2.Hash().Buffer;
-        Console.WriteLine(Convert.ToBase64String(argon));
-        Console.WriteLine(hashedPassword);
         return Convert.ToBase64String(argon) == hashedPassword;
     }
     
-    private static Tuple<string, string> HashPassword(string password)
+    public static Tuple<string, string> HashPassword(string password)
     {
         var passwordBytes = Encoding.UTF8.GetBytes(password);
         var salt = GenerateSalt();
-        Console.WriteLine(salt);
         var config = new Argon2Config
         {
             Type = Argon2Type.DataIndependentAddressing,
@@ -66,7 +62,6 @@ public class UserEntity : Record
 
         using var argon2 = new Argon2(config);
         var hashResult = argon2.Hash();
-        Console.WriteLine();
         return Tuple.Create(Convert.ToBase64String(hashResult.Buffer), Convert.ToBase64String(salt))!;
     }
 
