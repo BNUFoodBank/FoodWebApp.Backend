@@ -21,7 +21,7 @@ public class Filtering
                   if (!bank.Address.Equals(value, StringComparison.CurrentCultureIgnoreCase)) check = false;
                   break;
                case "dietaryrestriction":
-                  if (!bank.DietaryRestriction.Contains(value.ToLower())) check = false;
+                  if (!bank.DietaryRestrictions.Contains(value.ToLower())) check = false;
                   break;
                case "items":
                   if (!bank.Items.ContainsKey(value.ToLower())) check = false;

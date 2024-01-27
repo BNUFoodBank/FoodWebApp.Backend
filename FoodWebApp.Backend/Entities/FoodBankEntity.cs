@@ -10,7 +10,7 @@ public class FoodBankEntity : Record
     public string LatLng { get; set; }
     
     // Storage / Request Data
-    public List<string> DietaryRestriction { get; set; } = new();
+    public List<string> DietaryRestrictions { get; set; } = new();
     public Dictionary<string, int> Items { get; set; } = new();
     public Dictionary<string, int> RequestedItems { get; set; }
     
@@ -50,7 +50,7 @@ public class FoodBankEntity : Record
     // Convert FoodBank to Public
     public PublicFoodBank GetPublicFoodBank()
     {
-        var pfb = new PublicFoodBank(Name, Address, DietaryRestriction, Items, LatLng, ShoppingList);
+        var pfb = new PublicFoodBank(Name, Address, DietaryRestrictions, Items, LatLng, ShoppingList);
         return pfb;
     }
 
