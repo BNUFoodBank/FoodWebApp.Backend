@@ -105,7 +105,7 @@ public class UserEndpoint : IEndPoint
             return "Invalid Password.";
         }
 
-        var (salt, password)= UserEntity.HashPassword(request.NewPassword);
+        var (password, salt)= UserEntity.HashPassword(request.NewPassword);
 
         user.Salt = salt;
         user.Password = password;
